@@ -21,6 +21,7 @@ import { NotFoundException } from '../../common/exception/types/not-found.except
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Logger } from 'winston';
 import { ConfigService } from '@nestjs/config';
+import { ResponseUserInstagramRapidApi } from './dto/response-user-instagram-rapidapi.dto';
 
 @Injectable()
 export class UserInstagramService extends BaseService<
@@ -51,6 +52,38 @@ export class UserInstagramService extends BaseService<
     dto: CreateUserInstagramDto | CreateUserInstagramDto[],
   ): string {
     return Array.isArray(dto) ? dto[0].username : dto.username;
+  }
+
+  async searchUserInstagram(username: string): Promise<{
+    count: number;
+    items: ResponseUserInstagramRapidApi[];
+  }> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService
+          .get(
+            `https://instagram-scraper-api2.p.rapidapi.com/v1/search_users?search_query=${username}`,
+            {
+              headers: {
+                'x-rapidapi-host': 'instagram-scraper-api2.p.rapidapi.com',
+                'x-rapidapi-key': this.configService.get('RAPID_API_KEY'),
+              },
+            },
+          )
+          .pipe(
+            catchError((error: AxiosError) => {
+              this.logger.error('Error scraping user instagram', error);
+              throw error;
+            }),
+          ),
+      );
+
+      if (response.status !== 200) {
+        throw new NotFoundException('User instagram not found');
+      }
+
+      return response.data.data;
+    } catch (error) {}
   }
 
   private async scrapeInstagramPosts(username: string) {

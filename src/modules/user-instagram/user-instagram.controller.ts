@@ -30,6 +30,8 @@ import { PathParameterDto } from '../../common/dto/path-parameter.dto';
 import { UpdateResult } from 'typeorm';
 import { ResponsePostInstagramDto } from '../post-instagram/dto/response-post-instagram.dto';
 import { PostInstagramService } from '../post-instagram/post-instagram.service';
+import { ResponseUserInstagramRapidApi } from './dto/response-user-instagram-rapidapi.dto';
+import { SearchUserInstagramDto } from './dto/search-user-instagram.dto';
 
 @Controller('user-instagram')
 @ApiTags('UserInstagram')
@@ -60,6 +62,27 @@ export class UserInstagramController {
       data: plainToInstance(ResponseUserInstagramDto, result, {
         excludeExtraneousValues: true,
       }),
+    };
+  }
+
+  @Get('search')
+  @ListSwaggerExample(ResponseUserInstagramRapidApi, 'Mencari User Instagram')
+  async search(
+    @Request() req: any,
+    @Query() search: SearchUserInstagramDto,
+  ): Promise<BaseSuccessResponse<ResponseUserInstagramRapidApi>> {
+    const { count, items } =
+      await this.userInstagramService.searchUserInstagram(search.username);
+
+    return {
+      data: plainToInstance(ResponseUserInstagramRapidApi, items, {
+        excludeExtraneousValues: true,
+      }),
+      meta: {
+        page: 1,
+        totalData: count,
+        totalPage: 1,
+      },
     };
   }
 
