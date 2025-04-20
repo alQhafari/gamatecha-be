@@ -14,7 +14,16 @@ import { Logger } from 'winston';
 import { ArticleService } from '../articles/articles.service';
 import { ArticleStatus } from '../../common/enum/status.enum';
 import { JwtPayloadDto } from '../../common/dto/jwt-payload.dto';
-import { Category } from '../categories/entities/category.entity';
+import OpenAI from 'openai';
+import { ConfigService } from '@nestjs/config';
+
+interface OpenAIResponse {
+  choices: {
+    message: {
+      content: string;
+    };
+  }[];
+}
 
 @Injectable()
 export class PostInstagramService extends BaseService<
@@ -28,6 +37,7 @@ export class PostInstagramService extends BaseService<
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: Logger,
     private readonly articleService: ArticleService,
+    private readonly configService: ConfigService,
   ) {
     super(repository);
   }
@@ -48,14 +58,14 @@ export class PostInstagramService extends BaseService<
 
       const convertedTitle = await this.extractMainSentence(post.caption);
 
-      const convertedCategories = this.extractCategories(post.caption);
+      const convertedCategories = await this.extractCategories(post.caption);
 
       const article = await this.articleService.create({
         title: convertedTitle,
         mediaUrl: post.mediaUrl,
         content: post.caption,
         status: ArticleStatus.ARCHIVED,
-        categories: [convertedCategories[0]],
+        categories: convertedCategories,
         postInstagram_id: post.id,
       });
 
@@ -66,57 +76,107 @@ export class PostInstagramService extends BaseService<
     }
   }
 
+  preprocessCaption = (caption: string): string => {
+    return caption
+      .replace(/#[A-Za-z0-9_]+/g, '')
+      .replace(/@[A-Za-z0-9_]+/g, '')
+      .replace(/[^\w\s.,!?]/g, '')
+      .trim();
+  };
+
   private async extractMainSentence(caption: string): Promise<string> {
-    const sentences = cleanCaption(caption);
-    const tfidf = new TfIdf();
-
-    sentences.forEach((sentence) => tfidf.addDocument(sentence));
-
-    let bestSentence = '';
-    let highestScore = 0;
-
-    sentences.forEach((sentence, index) => {
-      let score = 0;
-
-      sentence.split(' ').forEach((word) => {
-        score += tfidf.tfidf(word, index);
-      });
-
-      if (score > highestScore) {
-        highestScore = score;
-        bestSentence = sentence;
-      }
+    const openai = new OpenAI({
+      apiKey: this.configService.get<string>('OPENAI_API_KEY'),
     });
 
-    return bestSentence;
+    const prompt = `
+    Ubah caption Instagram berikut menjadi judul artikel yang menarik 
+    dan profesional dengan maksimal 8 kata:
+    
+    Caption: ${caption}
+    
+    Judul yang baik harus:
+    1. Mengandung kata kunci utama
+    2. Memicu rasa penasaran
+    3. Menggunakan struktur subjek-predikat
+    4. Optimasi untuk SEO
+    `;
+
+    try {
+      const completions = await openai.chat.completions.create({
+        messages: [
+          {
+            role: 'system',
+            content:
+              'You are an assistant that creates SEO-friendly, engaging article titles from Instagram captions.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        model: 'gpt-4o',
+        max_tokens: 60,
+      });
+
+      const title = completions.choices[0]?.message?.content
+        ?.trim()
+        .replace(/^"+|"+$/g, '');
+
+      return title;
+    } catch (error) {
+      this.logger.error('Error extracting main sentence', error);
+      throw new Error('Error extracting main sentence');
+    }
   }
 
-  private extractCategories(caption: string): string[] {
-    const sentences = cleanCaption(caption);
-
-    const tfidf = new TfIdf();
-
-    sentences.forEach((sentence) => tfidf.addDocument(sentence));
-
-    const wordScores: { [word: string]: number } = {};
-
-    sentences.forEach((sentence, index) => {
-      sentence.split(' ').forEach((word) => {
-        const score = tfidf.tfidf(word, index);
-        if (wordScores[word]) {
-          wordScores[word] += score;
-        } else {
-          wordScores[word] = score;
-        }
-      });
+  private async extractCategories(caption: string): Promise<string[]> {
+    const openai = new OpenAI({
+      apiKey: this.configService.get<string>('OPENAI_API_KEY'),
     });
 
-    const sortedWords = Object.entries(wordScores)
-      .sort((a, b) => b[1] - a[1])
-      .map(([word]) => word);
+    const prompt = `
+  Tentukan 3 sampai 5 kategori/topik utama dari caption Instagram berikut:
+  
+  Caption: "${caption}"
+  
+  Berikan hasil dalam bentuk list JSON array string. Contoh:
+  ["Gaya Hidup", "Traveling", "Motivasi"]
+  `;
 
-    const categories = sortedWords.slice(0, 5);
+    try {
+      const completions = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content:
+              'Kamu adalah asisten yang ahli dalam menganalisis caption Instagram dan mengelompokkan topik/kategori kontennya.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 100,
+      });
 
-    return categories;
+      const content = completions.choices[0]?.message?.content?.trim();
+
+      if (!content) return [];
+
+      // Parse hasil array dari string
+      const categories = JSON.parse(content);
+
+      if (!Array.isArray(categories)) {
+        throw new Error('Unexpected format');
+      }
+
+      return categories;
+    } catch (error) {
+      this.logger.error('Error extracting categories with AI', error);
+      return [];
+    }
   }
 }

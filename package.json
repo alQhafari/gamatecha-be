@@ -47,6 +47,7 @@
     "date-fns": "^4.1.0",
     "natural": "^8.0.1",
     "nest-winston": "^1.9.7",
+    "openai": "^4.95.1",
     "passport-jwt": "^4.0.1",
     "pg": "^8.13.1",
     "prom-client": "^15.1.3",
