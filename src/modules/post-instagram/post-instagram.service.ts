@@ -16,6 +16,12 @@ import { ArticleStatus } from '../../common/enum/status.enum';
 import { JwtPayloadDto } from '../../common/dto/jwt-payload.dto';
 import OpenAI from 'openai';
 import { ConfigService } from '@nestjs/config';
+import { ResponsePostInstagramDto } from './dto/response-post-instagram.dto';
+import { catchError, firstValueFrom } from 'rxjs';
+import { HttpService } from '@nestjs/axios';
+import { AxiosError } from 'axios';
+import { ForbiddenException } from '../../common/exception/types/forbidden.exception';
+import { ResponsePostInstagramUserDto } from './dto/response-post-instagram-user.dto';
 
 interface OpenAIResponse {
   choices: {
@@ -38,6 +44,7 @@ export class PostInstagramService extends BaseService<
     private readonly logger: Logger,
     private readonly articleService: ArticleService,
     private readonly configService: ConfigService,
+    private readonly httpService: HttpService,
   ) {
     super(repository);
   }
@@ -178,5 +185,43 @@ export class PostInstagramService extends BaseService<
       this.logger.error('Error extracting categories with AI', error);
       return [];
     }
+  }
+
+  async findUserPost(username: string): Promise<{
+    count: number;
+    items: ResponsePostInstagramUserDto[];
+  }> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService
+          .get(
+            `https://instagram-scraper-api2.p.rapidapi.com/v1/posts?username_or_id_or_url=${username}`,
+            {
+              headers: {
+                'x-rapidapi-host': 'instagram-scraper-api2.p.rapidapi.com',
+                'x-rapidapi-key': this.configService.get('RAPID_API_KEY'),
+              },
+            },
+          )
+          .pipe(
+            catchError((error: AxiosError) => {
+              this.logger.error('Error scraping user instagram', error);
+              throw error;
+            }),
+          ),
+      );
+
+      if (response.status !== 200) {
+        if (response.status === 403) {
+          throw new ForbiddenException(
+            'Tidak bisa melihat postingan user dengan tipe Private',
+          );
+        }
+
+        throw new NotFoundException('User instagram not found');
+      }
+
+      return response.data.data;
+    } catch (error) {}
   }
 }

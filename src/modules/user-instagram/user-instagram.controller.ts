@@ -32,6 +32,8 @@ import { ResponsePostInstagramDto } from '../post-instagram/dto/response-post-in
 import { PostInstagramService } from '../post-instagram/post-instagram.service';
 import { ResponseUserInstagramRapidApi } from './dto/response-user-instagram-rapidapi.dto';
 import { SearchUserInstagramDto } from './dto/search-user-instagram.dto';
+import { PathParameterUsernameDto } from '../../common/dto/path-parameter-username.dto';
+import { ResponsePostInstagramUserDto } from '../post-instagram/dto/response-post-instagram-user.dto';
 
 @Controller('user-instagram')
 @ApiTags('UserInstagram')
@@ -81,6 +83,30 @@ export class UserInstagramController {
       meta: {
         page: 1,
         totalData: count,
+        totalPage: 1,
+      },
+    };
+  }
+
+  @Get(':username/post')
+  @ListSwaggerExample(
+    ResponsePostInstagramUserDto,
+    'Mengambil seluruh data Post Instagram dari User Instagram',
+  )
+  async findAllPostInstagram(
+    @Request() req: any,
+    @Param() pathParameter: PathParameterUsernameDto,
+  ): Promise<BaseSuccessResponse<ResponsePostInstagramUserDto>> {
+    const result = await this.postInstagramService.findUserPost(
+      pathParameter.username,
+    );
+    return {
+      data: plainToInstance(ResponsePostInstagramUserDto, result.items, {
+        excludeExtraneousValues: true,
+      }),
+      meta: {
+        page: 1,
+        totalData: result.count,
         totalPage: 1,
       },
     };
