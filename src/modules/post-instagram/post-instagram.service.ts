@@ -222,6 +222,8 @@ export class PostInstagramService extends BaseService<
       }
 
       return response.data.data;
-    } catch (error) {}
+    } catch (error) {
+      throw error;
+    }
   }
 }
