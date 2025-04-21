@@ -1,27 +1,21 @@
-import { Inject, Injectable, Post } from '@nestjs/common';
-import { CreateUserInstagramDto } from './dto/create-user-instagram.dto';
-import { BaseService } from '../../common/service/base.service';
-import { UserInstagram } from './entities/user-instagram.entity';
-import {
-  DataSource,
-  EntityManager,
-  ILike,
-  QueryRunner,
-  Repository,
-} from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
-import { JwtPayloadDto } from 'src/common/dto/jwt-payload.dto';
 import { HttpService } from '@nestjs/axios';
-import { catchError, firstValueFrom } from 'rxjs';
+import { Inject, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
 import { AxiosError } from 'axios';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { catchError, firstValueFrom } from 'rxjs';
+import { JwtPayloadDto } from 'src/common/dto/jwt-payload.dto';
+import { Readable } from 'stream';
+import { DataSource, EntityManager, Repository } from 'typeorm';
+import { Logger } from 'winston';
+import { NotFoundException } from '../../common/exception/types/not-found.exception';
+import { BaseService } from '../../common/service/base.service';
 import { PostInstagram } from '../post-instagram/entities/post-instagram.entity';
 import { StorageService } from '../storage/storage.service';
-import { Readable } from 'stream';
-import { NotFoundException } from '../../common/exception/types/not-found.exception';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Logger } from 'winston';
-import { ConfigService } from '@nestjs/config';
+import { CreateUserInstagramDto } from './dto/create-user-instagram.dto';
 import { ResponseUserInstagramRapidApi } from './dto/response-user-instagram-rapidapi.dto';
+import { UserInstagram } from './entities/user-instagram.entity';
 
 @Injectable()
 export class UserInstagramService extends BaseService<
@@ -66,7 +60,8 @@ export class UserInstagramService extends BaseService<
             {
               headers: {
                 'x-rapidapi-host': 'instagram-scraper-api2.p.rapidapi.com',
-                'x-rapidapi-key': this.configService.get('RAPID_API_KEY'),
+                'x-rapidapi-key':
+                  this.configService.get<string>('RAPID_API_KEY'),
               },
             },
           )
