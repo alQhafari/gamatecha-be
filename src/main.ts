@@ -1,7 +1,7 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -21,7 +21,7 @@ async function bootstrap() {
     defaultVersion: '1',
   });
 
-  app.enableShutdownHooks(); 
+  app.enableShutdownHooks();
 
   const config = new DocumentBuilder()
     .setTitle('Gamatecha API')
@@ -46,7 +46,6 @@ async function bootstrap() {
     customSiteTitle: 'Gamatecha API',
     swaggerOptions: {
       tagsSorter: 'alpha',
-      operationsSorter: 'alpha',
     },
   });
 
