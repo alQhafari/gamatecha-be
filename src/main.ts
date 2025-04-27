@@ -46,6 +46,7 @@ async function bootstrap() {
     customSiteTitle: 'Gamatecha API',
     swaggerOptions: {
       tagsSorter: 'alpha',
+      operationsSorter: 'alpha',
     },
   });
 
