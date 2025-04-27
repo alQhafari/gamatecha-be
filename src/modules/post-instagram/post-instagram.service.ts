@@ -1,27 +1,23 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { CreatePostInstagramDto } from './dto/create-post-instagram.dto';
-import { UpdatePostInstagramDto } from './dto/update-post-instagram.dto';
-import { BaseService } from '../../common/service/base.service';
-import { PostInstagram } from './entities/post-instagram.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, QueryRunner, Repository } from 'typeorm';
-import { TfIdf } from 'natural';
-import { NotFoundException } from '../../common/exception/types/not-found.exception';
-import cleanCaption from '../../common/utils/cleanCaption';
-import { Article } from '../articles/entities/article.entity';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Logger } from 'winston';
-import { ArticleService } from '../articles/articles.service';
-import { ArticleStatus } from '../../common/enum/status.enum';
-import { JwtPayloadDto } from '../../common/dto/jwt-payload.dto';
-import OpenAI from 'openai';
-import { ConfigService } from '@nestjs/config';
-import { ResponsePostInstagramDto } from './dto/response-post-instagram.dto';
-import { catchError, firstValueFrom } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
+import { Inject, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
 import { AxiosError } from 'axios';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import OpenAI from 'openai';
+import { catchError, firstValueFrom } from 'rxjs';
+import { DataSource, Repository } from 'typeorm';
+import { Logger } from 'winston';
+import { JwtPayloadDto } from '../../common/dto/jwt-payload.dto';
+import { ArticleStatus } from '../../common/enum/status.enum';
 import { ForbiddenException } from '../../common/exception/types/forbidden.exception';
+import { NotFoundException } from '../../common/exception/types/not-found.exception';
+import { BaseService } from '../../common/service/base.service';
+import { ArticleService } from '../articles/articles.service';
+import { Article } from '../articles/entities/article.entity';
+import { CreatePostInstagramDto } from './dto/create-post-instagram.dto';
 import { ResponsePostInstagramUserDto } from './dto/response-post-instagram-user.dto';
+import { PostInstagram } from './entities/post-instagram.entity';
 
 interface OpenAIResponse {
   choices: {
@@ -165,15 +161,15 @@ export class PostInstagramService extends BaseService<
             content: prompt,
           },
         ],
-        temperature: 0.7,
         max_tokens: 100,
       });
 
-      const content = completions.choices[0]?.message?.content?.trim();
+      const content = completions.choices[0]?.message?.content
+        ?.trim()
+        .replace(/^"+|"+$/g, '');
 
       if (!content) return [];
 
-      // Parse hasil array dari string
       const categories = JSON.parse(content);
 
       if (!Array.isArray(categories)) {
@@ -182,7 +178,7 @@ export class PostInstagramService extends BaseService<
 
       return categories;
     } catch (error) {
-      this.logger.error('Error extracting categories with AI', error);
+      this.logger.error('Error extracting categories with AI', error.message);
       return [];
     }
   }
