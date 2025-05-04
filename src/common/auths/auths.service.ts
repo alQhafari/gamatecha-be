@@ -1,15 +1,15 @@
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
+import { Cache } from 'cache-manager';
+import { UnauthorizedException } from '../exception/types/unauthorized.exception';
+import { User } from '../user/entities/user.entity';
+import { UserService } from '../user/user.service';
 import { LoginDefaultDto } from './dto/login-default.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { TokenPayload } from './token-payload.interface';
-import { UserService } from '../user/user.service';
-import { User } from '../user/entities/user.entity';
-import { UnauthorizedException } from '../exception/types/unauthorized.exception';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
 
 @Injectable()
 export class AuthsService {
@@ -111,5 +111,22 @@ export class AuthsService {
       secret: this.configService.get('JWT_SECRET_ACCESS'),
       ignoreExpiration: false,
     });
+  }
+
+  async getMe(id: number) {
+    const currentUser = await this.userService.findOneBy({
+      where: {
+        id,
+      },
+    });
+
+    if (!currentUser) {
+      throw new UnauthorizedException(
+        'invalidCredential',
+        'Your credential is invalid.',
+      );
+    }
+
+    return currentUser;
   }
 }

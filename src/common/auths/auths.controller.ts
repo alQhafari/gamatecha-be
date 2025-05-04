@@ -8,17 +8,18 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { plainToInstance } from 'class-transformer';
+import { BaseSuccessResponse } from '../response/base.response';
 import {
   CreateSwaggerExample,
   DetailSwaggerExample,
 } from '../swagger/swagger-example.response';
+import { ResponseUserDto } from '../user/dto/response-user.dto';
 import { AuthsService } from './auths.service';
 import { LoginDefaultDto } from './dto/login-default.dto';
 import { LoginResponseDto } from './dto/login-response.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { TokenResponseDto } from './dto/token-response.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
-import { BaseSuccessResponse } from '../response/base.response';
 
 @Controller('auth')
 @ApiTags('Auth')
@@ -68,6 +69,21 @@ export class AuthsController {
     );
     return {
       data: plainToInstance(TokenResponseDto, result, {
+        excludeExtraneousValues: true,
+      }),
+    };
+  }
+
+  @Get('me')
+  @DetailSwaggerExample(ResponseUserDto)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  async getMe(
+    @Request() req: any,
+  ): Promise<BaseSuccessResponse<ResponseUserDto>> {
+    const user = await this.authsService.getMe(req.user.id);
+    return {
+      data: plainToInstance(ResponseUserDto, user, {
         excludeExtraneousValues: true,
       }),
     };
