@@ -11,9 +11,9 @@ import {
 } from 'typeorm';
 import { BaseEntity } from '../../../common/entity/base.entity';
 import { ArticleStatus } from '../../../common/enum/status.enum';
-import { PostInstagram } from '../../post-instagram/entities/post-instagram.entity';
-import { Category } from '../../categories/entities/category.entity';
 import { ArticleView } from '../../article-views/entities/article-view.entity';
+import { Category } from '../../categories/entities/category.entity';
+import { PostInstagram } from '../../post-instagram/entities/post-instagram.entity';
 
 @Entity()
 export class Article extends BaseEntity {
@@ -44,9 +44,7 @@ export class Article extends BaseEntity {
   postInstagram: PostInstagram | null = null;
 
   @ManyToMany(() => Category, (category) => category.articles, {
-    cascade: true,
-    onDelete: 'SET NULL',
-    onUpdate: 'CASCADE',
+    cascade: ['insert', 'update'],
   })
   @JoinTable()
   categories: Category[] | null = null;

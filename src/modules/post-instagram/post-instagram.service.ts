@@ -6,7 +6,7 @@ import { AxiosError } from 'axios';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import OpenAI from 'openai';
 import { catchError, firstValueFrom } from 'rxjs';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, QueryRunner, Repository } from 'typeorm';
 import { Logger } from 'winston';
 import { JwtPayloadDto } from '../../common/dto/jwt-payload.dto';
 import { ArticleStatus } from '../../common/enum/status.enum';
@@ -46,12 +46,19 @@ export class PostInstagramService extends BaseService<
   }
 
   async convertToArticle(id: number, user?: JwtPayloadDto): Promise<Article> {
+    const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
     try {
-      const post = await this.findOneBy({
+      const postInstagramRepository =
+        queryRunner.manager.getRepository(PostInstagram);
+      const articleRepository = queryRunner.manager.getRepository(Article);
+
+      const post = await postInstagramRepository.findOne({
         where: {
           id: id,
         },
-        relations: ['user'],
       });
 
       if (!post) {
@@ -63,19 +70,29 @@ export class PostInstagramService extends BaseService<
 
       const convertedCategories = await this.extractCategories(post.caption);
 
-      const article = await this.articleService.create({
+      const article = articleRepository.create({
         title: convertedTitle,
         mediaUrl: post.mediaUrl,
         content: post.caption,
         status: ArticleStatus.ARCHIVED,
-        categories: convertedCategories,
-        postInstagram_id: post.id,
+        categories: convertedCategories.map((category) => ({
+          name: category,
+        })),
+        postInstagram: post,
+        createdBy: user?.username ?? 'System',
       });
 
-      return Array.isArray(article) ? article[0] : article;
+      const savedArticle = await articleRepository.save(article);
+
+      return await this.articleService.findOne(savedArticle.id, {
+        relations: this.articleService.defaultRelation(),
+      });
     } catch (error) {
+      await queryRunner.rollbackTransaction();
       this.logger.error(error);
       throw error;
+    } finally {
+      await queryRunner.release();
     }
   }
 
