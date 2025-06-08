@@ -6,6 +6,7 @@ import { AxiosError } from 'axios';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import OpenAI from 'openai';
 import { catchError, firstValueFrom } from 'rxjs';
+import { Category } from 'src/modules/categories/entities/category.entity';
 import { DataSource, QueryRunner, Repository } from 'typeorm';
 import { Logger } from 'winston';
 import { JwtPayloadDto } from '../../common/dto/jwt-payload.dto';
@@ -54,6 +55,7 @@ export class PostInstagramService extends BaseService<
       const postInstagramRepository =
         queryRunner.manager.getRepository(PostInstagram);
       const articleRepository = queryRunner.manager.getRepository(Article);
+      const categoryRepository = queryRunner.manager.getRepository(Category);
 
       const post = await postInstagramRepository.findOne({
         where: {
@@ -70,21 +72,38 @@ export class PostInstagramService extends BaseService<
 
       const convertedCategories = await this.extractCategories(post.caption);
 
+      let createdCategories: Partial<Category>[] = [];
+      for (const category of convertedCategories) {
+        let existingCategory = await categoryRepository.findOne({
+          where: { name: category },
+        });
+
+        if (!existingCategory) {
+          const newCategory = categoryRepository.create({ name: category });
+          existingCategory = await categoryRepository.save(newCategory);
+        }
+
+        createdCategories.push(existingCategory);
+      }
+
       const article = articleRepository.create({
         title: convertedTitle,
         mediaUrl: post.mediaUrl,
         content: post.caption,
         status: ArticleStatus.ARCHIVED,
-        categories: convertedCategories.map((category) => ({
-          name: category,
-        })),
+        categories: createdCategories,
         postInstagram: post,
         createdBy: user?.username ?? 'System',
       });
 
       const savedArticle = await articleRepository.save(article);
 
-      return await this.articleService.findOne(savedArticle.id, {
+      await queryRunner.commitTransaction();
+
+      return await articleRepository.findOne({
+        where: {
+          id: savedArticle.id,
+        },
         relations: this.articleService.defaultRelation(),
       });
     } catch (error) {

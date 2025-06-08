@@ -5,6 +5,7 @@ import { Category } from 'src/modules/categories/entities/category.entity';
 import {
   DataSource,
   EntityManager,
+  FindOptionsRelations,
   FindOptionsWhere,
   ILike,
   QueryRunner,
@@ -28,8 +29,11 @@ export class ArticleService extends BaseService<Article, CreateArticleDto> {
   /*
     Default Relationship
   */
-  defaultRelation() {
-    return ['categories', 'postInstagram'];
+  defaultRelation(): FindOptionsRelations<Article> {
+    return {
+      categories: true,
+      postInstagram: true,
+    };
   }
 
   async create(
