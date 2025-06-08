@@ -48,6 +48,7 @@ async function bootstrap() {
       tagsSorter: 'alpha',
       operationsSorter: 'alpha',
     },
+    jsonDocumentUrl: 'swagger/json',
   });
 
   await app.listen(3001);

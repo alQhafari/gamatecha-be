@@ -1,19 +1,19 @@
 import { Injectable } from '@nestjs/common';
-import { CreateArticleDto } from './dto/create-article.dto';
-import { UpdateArticleDto } from './dto/update-article.dto';
-import { BaseService } from '../../common/service/base.service';
-import { Article } from './entities/article.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { JwtPayloadDto } from 'src/common/dto/jwt-payload.dto';
+import { Category } from 'src/modules/categories/entities/category.entity';
 import {
   DataSource,
   EntityManager,
+  FindOptionsWhere,
+  ILike,
   QueryRunner,
   Repository,
-  ILike,
-  FindOptionsWhere,
-  UpdateResult,
 } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
-import { JwtPayloadDto } from 'src/common/dto/jwt-payload.dto';
+import { BaseService } from '../../common/service/base.service';
+import { CreateArticleDto } from './dto/create-article.dto';
+import { UpdateArticleDto } from './dto/update-article.dto';
+import { Article } from './entities/article.entity';
 
 @Injectable()
 export class ArticleService extends BaseService<Article, CreateArticleDto> {
@@ -124,36 +124,42 @@ export class ArticleService extends BaseService<Article, CreateArticleDto> {
     );
   }
 
-  // async update(
-  //   pathParameter: FindOptionsWhere<Article>,
-  //   updateArticleDto: UpdateArticleDto,
-  //   user: JwtPayloadDto,
-  //   manager?: EntityManager,
-  // ): Promise<Article> {
-  //   const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
-  //   await queryRunner.connect();
-  //   await queryRunner.startTransaction();
+  async update(
+    pathParameter: FindOptionsWhere<Article>,
+    updateArticleDto: UpdateArticleDto,
+    user: JwtPayloadDto,
+    manager?: EntityManager,
+  ): Promise<Article> {
+    const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-  //   try {
-  //     const article = await this.findOneByOrFail(pathParameter);
+    try {
+      const articleRepository = queryRunner.manager.getRepository(Article);
+      const categoryRepository = queryRunner.manager.getRepository(Category);
 
-  //     console.log(article);
+      const article = await this.findOneByOrFail(pathParameter);
 
-  //     const result = {
-  //       ...article,
-  //       ...updateArticleDto,
-  //     };
-  //     console.log(result);
+      let categories = article.categories;
+      if (updateArticleDto.categories) {
+        categories = await categoryRepository.find({
+          where: updateArticleDto.categories.map((name) => ({ name })),
+        });
+      }
 
-  //     await queryRunner.manager.getRepository(Article).save(result);
+      Object.assign(article, updateArticleDto);
 
-  //     await queryRunner.commitTransaction();
-  //     return article;
-  //   } catch (error) {
-  //     await queryRunner.rollbackTransaction();
-  //     throw error;
-  //   } finally {
-  //     await queryRunner.release();
-  //   }
-  // }
+      article.categories = categories;
+
+      await articleRepository.save(article);
+
+      await queryRunner.commitTransaction();
+      return article;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
 }
