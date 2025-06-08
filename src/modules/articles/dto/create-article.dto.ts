@@ -1,22 +1,14 @@
-import {
-  IsEnum,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  IsUrl,
-  IsDateString,
-} from 'class-validator';
-import { ArticleStatus } from '../../../common/enum/status.enum';
-import { PostInstagram } from '../../post-instagram/entities/post-instagram.entity';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
+import { ArticleStatus } from '../../../common/enum/status.enum';
 
 export class CreateArticleDto {
   @ApiProperty()
   @IsString()
-  title: string = '';
+  title: string;
 
   @ApiProperty()
-  mediaUrl: string = '';
+  mediaUrl: string;
 
   @ApiPropertyOptional()
   @IsEnum(ArticleStatus)
@@ -24,7 +16,7 @@ export class CreateArticleDto {
 
   @ApiProperty()
   @IsString()
-  content: string = '';
+  content: string;
 
   @ApiPropertyOptional()
   @IsOptional()
