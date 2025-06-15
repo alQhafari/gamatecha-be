@@ -9,11 +9,15 @@ import { UserInstagram } from '../../user-instagram/entities/user-instagram.enti
   unique: false,
   where: '"deletedAt" IS NULL AND "deletedBy" IS NULL',
 })
+@Index('IDX_post_instagram_instagramId', ['instagramId'], {
+  unique: false,
+  where: '"deletedAt" IS NULL AND "deletedBy" IS NULL',
+})
 export class PostInstagram extends BaseEntity {
   @Column({ unique: false, nullable: true })
   instagramPk: string = '';
 
-  @Column({ unique: true, nullable: false })
+  @Column({ unique: false, nullable: true })
   instagramId: string = '';
 
   @Column({ unique: true, nullable: false })
