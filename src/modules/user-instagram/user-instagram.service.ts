@@ -184,7 +184,7 @@ export class UserInstagramService extends BaseService<
     const existingPost = await this.dataSource
       .getRepository(PostInstagram)
       .findOne({
-        where: { code: post.code },
+        where: { code: post.code, instagramPk: post.id },
       });
 
     if (existingPost) {
