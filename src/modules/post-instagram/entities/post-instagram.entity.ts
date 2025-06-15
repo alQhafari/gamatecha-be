@@ -1,19 +1,16 @@
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  JoinTable,
-  ManyToOne,
-  OneToOne,
-} from 'typeorm';
+import { Column, Entity, Index, ManyToOne, OneToOne } from 'typeorm';
 import { BaseEntity } from '../../../common/entity/base.entity';
+import { Article } from '../../articles/entities/article.entity';
 import { MediaType } from '../../media-type/entities/media-type.entity';
 import { UserInstagram } from '../../user-instagram/entities/user-instagram.entity';
-import { Article } from '../../articles/entities/article.entity';
 
 @Entity()
+@Index('IDX_post_instagram_instagramPk', ['instagramPk'], {
+  unique: false,
+  where: '"deletedAt" IS NULL AND "deletedBy" IS NULL',
+})
 export class PostInstagram extends BaseEntity {
-  @Column({ unique: true, nullable: false })
+  @Column({ unique: false, nullable: true })
   instagramPk: string = '';
 
   @Column({ unique: true, nullable: false })
