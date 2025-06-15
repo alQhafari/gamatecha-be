@@ -95,6 +95,8 @@ export class UserInstagramService extends BaseService<
           },
         ),
       );
+
+      return responseScrapingUser;
     } catch (error) {
       this.logger.error(
         `ERROR SCRAPING USER INSTAGRAM: ${username}`,
