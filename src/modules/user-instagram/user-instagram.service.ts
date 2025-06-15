@@ -6,6 +6,7 @@ import { AxiosError } from 'axios';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { catchError, firstValueFrom } from 'rxjs';
 import { JwtPayloadDto } from 'src/common/dto/jwt-payload.dto';
+import { ForbiddenException } from 'src/common/exception/types/forbidden.exception';
 import { Readable } from 'stream';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 import { Logger } from 'winston';
@@ -82,9 +83,9 @@ export class UserInstagramService extends BaseService<
   }
 
   private async scrapeInstagramPosts(username: string) {
-    return firstValueFrom(
-      this.httpService
-        .get(
+    try {
+      const responseScrapingUser = await firstValueFrom(
+        this.httpService.get(
           `https://instagram-scraper-api2.p.rapidapi.com/v1.2/posts?username_or_id_or_url=${username}`,
           {
             headers: {
@@ -92,14 +93,24 @@ export class UserInstagramService extends BaseService<
               'x-rapidapi-key': this.configService.get('RAPID_API_KEY'),
             },
           },
-        )
-        .pipe(
-          catchError((error: AxiosError) => {
-            this.logger.error('Error scraping user instagram', error);
-            throw error;
-          }),
         ),
-    );
+      );
+    } catch (error) {
+      this.logger.error(
+        `ERROR SCRAPING USER INSTAGRAM: ${username}`,
+        UserInstagramService.name,
+        error,
+      );
+      if (error.status === 403) {
+        throw new ForbiddenException(
+          `Akun Instagram ${username} Bersifat Private`,
+        );
+      } else if (error.status === 400) {
+        throw new NotFoundException('User instagram not found');
+      }
+
+      throw error;
+    }
   }
 
   private async downloadAndUploadProfilePicture(
@@ -236,10 +247,11 @@ export class UserInstagramService extends BaseService<
       relations: ['postInstagram'],
     });
 
-    const scrapePosts = await this.scrapeInstagramPosts(username);
-
-    if (scrapePosts.status !== 200) {
-      throw new NotFoundException('User instagram not found');
+    let scrapePosts: any;
+    try {
+      scrapePosts = await this.scrapeInstagramPosts(username);
+    } catch (error) {
+      throw error;
     }
 
     let profilePictureUrl = userInstagramInstance?.profilePic;
