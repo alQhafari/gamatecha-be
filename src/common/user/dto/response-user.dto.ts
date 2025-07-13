@@ -1,13 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Expose, Type } from 'class-transformer';
-import {
-  IsBoolean,
-  IsDate,
-  IsEmail,
-  IsNumber,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { Expose } from 'class-transformer';
+import { IsDate, IsEmail, IsNumber, IsString } from 'class-validator';
 
 export class ResponseUserDto {
   @Expose()
@@ -24,6 +17,10 @@ export class ResponseUserDto {
   @ApiProperty()
   @IsEmail()
   email: string | null = null;
+
+  @Expose()
+  @ApiPropertyOptional()
+  isAdmin?: boolean;
 
   @Expose()
   @ApiProperty()

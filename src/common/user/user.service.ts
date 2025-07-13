@@ -1,19 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { JwtPayloadDto } from 'src/common/dto/jwt-payload.dto';
+import { BaseService } from 'src/common/service/base.service';
 import {
   DataSource,
   EntityManager,
-  FindOneOptions,
   FindOptionsWhere,
   ILike,
   QueryRunner,
   Repository,
 } from 'typeorm';
-import { JwtPayloadDto } from 'src/common/dto/jwt-payload.dto';
-import { BaseService } from 'src/common/service/base.service';
-import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { User } from './entities/user.entity';
 
 @Injectable()
 export class UserService extends BaseService<User, CreateUserDto> {
@@ -65,16 +64,9 @@ export class UserService extends BaseService<User, CreateUserDto> {
       Search
     */
     if (search) {
-      findOption.where.push(
-        {
-          username: ILike(`%${search}%`),
-        },
-        {
-          userExtend: {
-            fullname: ILike(`%${search}%`),
-          },
-        },
-      );
+      findOption.where.push({
+        username: ILike(`%${search}%`),
+      });
     }
 
     /* 
